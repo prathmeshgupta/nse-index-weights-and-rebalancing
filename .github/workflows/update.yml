@@ -1,0 +1,44 @@
+name: Weekly Index Constituents & Rebalancing Dataset Update
+
+on:
+  schedule:
+    # Runs every Saturday at 20:00 UTC (01:30 IST Sunday)
+    - cron: '0 20 * * 6'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-dataset:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Fetch latest index constituents and evaluate quality
+        run: |
+          python update.py
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add output/
+          if git diff --staged --quiet; then
+            echo "No changes in index constituents."
+          else
+            git commit -m "chore(data): automated weekly index constituents update [skip ci]"
+            git push
+          fi
